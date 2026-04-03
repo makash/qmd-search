@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,25 @@ def truncate(text: str, limit: int = 4000) -> str:
     if len(text) <= limit:
         return text
     return text[:limit] + f"\n\n[truncated {len(text) - limit} chars]"
+
+
+def extract_title_candidate(text: str) -> str:
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    for paragraph in paragraphs:
+        if paragraph.startswith(("<", "# ")):
+            continue
+        return paragraph
+    return text.strip()
+
+
+def section_name(role: str) -> str:
+    mapping = {
+        "assistant": "Assistant",
+        "user": "User",
+        "toolResult": "Tool Result",
+        "bashExecution": "Bash Execution",
+    }
+    return mapping.get(role, role.title())
 
 
 def emit_block(lines: list[str], heading: str, body: str, fence: str | None = None) -> None:
@@ -70,7 +90,9 @@ def parse_file(path: Path) -> str:
                 if kind == "text":
                     text = item.get("text", "")
                     if role == "user" and text and not first_user_text:
-                        first_user_text = text
+                        candidate = extract_title_candidate(text)
+                        if candidate:
+                            first_user_text = candidate
                     blocks.append(("Text", text, None))
                 elif kind == "thinking":
                     blocks.append(("Thinking", truncate(item.get("thinking", ""), 2000), None))
@@ -86,7 +108,7 @@ def parse_file(path: Path) -> str:
 
             if blocks:
                 entries.append({
-                    "section": role.title(),
+                    "section": section_name(role),
                     "blocks": blocks,
                 })
 

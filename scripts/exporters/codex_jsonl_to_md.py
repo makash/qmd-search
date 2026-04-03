@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,71 @@ def truncate(text: str, limit: int = 4000) -> str:
     if len(text) <= limit:
         return text
     return text[:limit] + f"\n\n[truncated {len(text) - limit} chars]"
+
+
+def looks_like_boilerplate(text: str) -> bool:
+    stripped = text.strip()
+    boilerplate_prefixes = (
+        "<environment_context>",
+        "<app-context>",
+        "<permissions instructions>",
+        "# AGENTS.md instructions",
+        "Use the $",
+        "# Brainstorm a Feature or Improvement",
+        "## Execution Flow",
+        "Tool mapping:",
+    )
+    boilerplate_contains = (
+        "Compound Codex Tool Mapping",
+        "A skill is a set of local instructions",
+        "Current year is 2026",
+        "Brainstorming helps answer",
+        "Do not proceed until",
+        "What would you like to explore?",
+    )
+    return (not stripped or stripped.startswith(boilerplate_prefixes) or any(token in stripped for token in boilerplate_contains))
+
+
+def extract_title_candidate(text: str) -> str:
+    cleaned = re.sub(r"<INSTRUCTIONS>.*?</INSTRUCTIONS>", "", text, flags=re.DOTALL)
+    cleaned = re.sub(r"<environment_context>.*?</environment_context>", "", cleaned, flags=re.DOTALL)
+    cleaned = re.sub(r"<app-context>.*?</app-context>", "", cleaned, flags=re.DOTALL)
+
+    feature_match = re.search(r"<feature_description>\s*(.*?)\s*</feature_description>", cleaned, flags=re.DOTALL)
+    if feature_match:
+        candidate = feature_match.group(1).strip()
+        if candidate and candidate != "#$ARGUMENTS":
+            return candidate
+
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", cleaned) if p.strip()]
+    for paragraph in reversed(paragraphs):
+        if looks_like_boilerplate(paragraph):
+            continue
+        if paragraph.startswith(("#", "<", "- ", "* ")):
+            continue
+        if len(paragraph) > 350:
+            continue
+        return paragraph
+
+    for paragraph in reversed(paragraphs):
+        if looks_like_boilerplate(paragraph):
+            continue
+        if paragraph.startswith(("#", "<")):
+            continue
+        return paragraph
+
+    stripped = text.strip()
+    if looks_like_boilerplate(stripped):
+        return ""
+    return stripped
+
+
+def section_name(role: str | None) -> str:
+    if role == "assistant":
+        return "Assistant"
+    if role == "user":
+        return "User"
+    return role.title() if isinstance(role, str) else "Message"
 
 
 def emit_block(lines: list[str], heading: str, body: str, fence: str | None = None) -> None:
@@ -91,10 +157,11 @@ def parse_file(path: Path) -> str:
                         text = item.get("text", "")
                         if role == "developer":
                             continue
-                        stripped = text.lstrip()
-                        if role == "user" and text and not stripped.startswith("<") and not stripped.startswith("# AGENTS.md instructions") and not first_user_text:
-                            first_user_text = text
-                        if stripped.startswith("<environment_context>") or stripped.startswith("<app-context>") or stripped.startswith("# AGENTS.md instructions"):
+                        if role == "user" and text and not first_user_text:
+                            candidate = extract_title_candidate(text)
+                            if candidate:
+                                first_user_text = candidate
+                        if looks_like_boilerplate(text):
                             continue
                         blocks.append(("Text", text, None))
                     elif kind == "input_image":
@@ -102,7 +169,7 @@ def parse_file(path: Path) -> str:
                         blocks.append(("Image", f"Image input: {image_url}", None))
                 if blocks:
                     entries.append({
-                        "section": role.title() if isinstance(role, str) else "Message",
+                        "section": section_name(role),
                         "blocks": blocks,
                     })
                 continue
