@@ -1,4 +1,6 @@
-# qmd-unified
+# qmd-search
+
+qmd-search turns AI coding session logs from Claude Code, Codex, and Pi into searchable Markdown for QMD, with a practical playbook for syncing and indexing them on Olares.
 
 Minimal exporters and a deployment playbook for indexing local AI session logs with [QMD](https://github.com/tobi/qmd).
 
