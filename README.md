@@ -1,6 +1,6 @@
 # qmd-search
 
-qmd-search turns AI coding session logs from Claude Code, Codex, and Pi into searchable Markdown for QMD, with a practical playbook for syncing and indexing them on Olares.
+qmd-search turns AI coding session logs from Claude Code, Codex, and Pi into searchable Markdown for QMD, with a practical playbook for syncing and indexing them on a remote GPU server.
 
 Minimal exporters and a deployment playbook for indexing local AI session logs with [QMD](https://github.com/tobi/qmd).
 
@@ -9,8 +9,8 @@ Current scope:
 - **Pi JSONL -> Markdown** exporter
 - playbook for:
   - exporting sessions on a laptop
-  - installing Node + QMD on Olares with `mise`
-  - syncing markdown to Olares
+  - installing Node + QMD on a remote GPU server with `mise`
+  - syncing markdown to a remote server
   - indexing and querying with QMD
 
 For **Claude Code**, this repo currently recommends using the existing external exporter:
@@ -20,33 +20,33 @@ For **Claude Code**, this repo currently recommends using the existing external 
 
 - `scripts/exporters/codex_jsonl_to_md.py`
 - `scripts/exporters/pi_jsonl_to_md.py`
-- `docs/PLAYBOOK.md`
+- `docs/index-ai-coding-session-logs-with-qmd-on-a-remote-gpu-server.md`
 
 ## Quick start
 
 ### Codex
 ```bash
 python3 scripts/exporters/codex_jsonl_to_md.py \
-  ~/.codex/sessions/2026/04/01/rollout-...jsonl \
-  ~/qmd-sessions/main-laptop/codex/sample.md
+  ~/.codex/sessions/YYYY/MM/DD/rollout-<session-id>.jsonl \
+  ~/qmd-sessions/main-laptop/codex/<session-id>.md
 ```
 
 ### Pi
 ```bash
 python3 scripts/exporters/pi_jsonl_to_md.py \
-  ~/.pi/agent/sessions/.../2026-04-01T13-03-34-227Z_....jsonl \
-  ~/qmd-sessions/main-laptop/pi/sample.md
+  ~/.pi/agent/sessions/<encoded-cwd>/<timestamp>_<session-id>.jsonl \
+  ~/qmd-sessions/main-laptop/pi/<session-id>.md
 ```
 
 ### Claude Code
 ```bash
 uvx claude-code-log@latest \
-  ~/.claude/projects/<project>/<session>.jsonl \
+  ~/.claude/projects/<encoded-project>/<session-id>.jsonl \
   -f md \
-  -o ~/qmd-sessions/main-laptop/claude-code/sample.md
+  -o ~/qmd-sessions/main-laptop/claude-code/<session-id>.md
 ```
 
-Then follow `docs/PLAYBOOK.md`.
+Then follow `docs/index-ai-coding-session-logs-with-qmd-on-a-remote-gpu-server.md`.
 
 ## Notes
 
