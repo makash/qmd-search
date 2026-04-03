@@ -51,3 +51,7 @@ Then follow `docs/PLAYBOOK.md`.
 - QMD can index raw JSONL, but Markdown works better.
 - The current Codex and Pi exporters are intentionally small first-pass converters.
 - Claude Code main-session files are the best first source. Excluding `subagents/` initially is recommended.
+
+## License
+
+MIT
